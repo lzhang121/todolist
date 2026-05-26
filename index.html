@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TodoList</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <h1>我的待办清单</h1>
+
+    <form id="todo-form" class="todo-form">
+      <label for="todo-input" class="sr-only">输入待办事项</label>
+      <input
+        id="todo-input"
+        type="text"
+        placeholder="输入一个待办事项..."
+        autocomplete="off"
+        maxlength="120"
+        required
+      >
+      <button type="submit">添加</button>
+    </form>
+
+    <section class="toolbar" aria-label="待办筛选工具栏">
+      <div class="filters" role="group" aria-label="筛选待办">
+        <button class="filter-btn active" data-filter="all" type="button">全部</button>
+        <button class="filter-btn" data-filter="active" type="button">未完成</button>
+        <button class="filter-btn" data-filter="completed" type="button">已完成</button>
+      </div>
+      <button id="clear-completed" type="button">清除已完成</button>
+    </section>
+
+    <ul id="todo-list" class="todo-list" aria-live="polite"></ul>
+
+    <p id="todo-stats" class="stats">0 个未完成</p>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
