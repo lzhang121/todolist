@@ -19,12 +19,17 @@
       <label for="todo-input" class="sr-only">输入待办事项</label>
       <input
         id="todo-input"
+        class="todo-form-text"
         type="text"
         placeholder="输入一个待办事项..."
         autocomplete="off"
         maxlength="120"
       >
-      <button type="submit">添加</button>
+      <div class="todo-form-meta">
+        <label for="todo-date" class="sr-only">截止日期（可选）</label>
+        <input id="todo-date" class="todo-form-date" type="date" title="截止日期（可选）">
+        <button type="submit">添加</button>
+      </div>
     </form>
 
     <section class="toolbar" aria-label="待办筛选工具栏">

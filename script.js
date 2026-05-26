@@ -2,8 +2,11 @@ const STORAGE_KEY = "todolist.items.v1";
 const UNDO_TIMEOUT_MS = 5000;
 const SAMPLE_TODOS = ["了解项目需求", "完成第一版待办页面"];
 
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 const todoForm = document.getElementById("todo-form");
 const todoInput = document.getElementById("todo-input");
+const todoDateInput = document.getElementById("todo-date");
 const todoList = document.getElementById("todo-list");
 const todoStats = document.getElementById("todo-stats");
 const filterButtons = document.querySelectorAll(".filter-btn");
@@ -22,8 +25,6 @@ let currentFilter = "all";
 let lastAddedId = null;
 let pendingUndo = null;
 let undoTimerId = null;
-let storageFailed = false;
-
 init();
 
 function init() {
@@ -70,25 +71,29 @@ function onSubmit(event) {
     return;
   }
 
-  addTodo(text);
+  const dueDate = normalizeDueDate(todoDateInput.value);
+  addTodo(text, dueDate);
   todoInput.value = "";
+  todoDateInput.value = "";
   todoInput.focus();
 }
 
 function onInputKeydown(event) {
   if (event.key === "Escape") {
     todoInput.value = "";
+    todoDateInput.value = "";
     todoInput.focus();
   }
 }
 
-function addTodo(text) {
+function addTodo(text, dueDate = null) {
   clearPendingUndo();
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   todos.unshift({
     id,
     text,
     completed: false,
+    dueDate,
   });
   lastAddedId = id;
   saveTodos();
@@ -97,10 +102,12 @@ function addTodo(text) {
 
 function addSampleTodos() {
   clearPendingUndo();
+  const tomorrow = shiftISODate(getTodayISO(), 1);
   const samples = SAMPLE_TODOS.map((text, index) => ({
     id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
     text,
     completed: false,
+    dueDate: index === 0 ? tomorrow : null,
   }));
   todos = [...samples, ...todos];
   lastAddedId = samples[0].id;
@@ -299,10 +306,19 @@ function createTodoElement(todo) {
   checkbox.type = "checkbox";
   checkbox.setAttribute("aria-label", `标记「${todo.text}」为完成`);
 
+  const content = document.createElement("div");
+  content.className = "todo-content";
+
   const text = document.createElement("span");
   text.className = "todo-text";
   text.textContent = todo.text;
   text.title = todo.text;
+
+  content.append(text);
+
+  const dueDateEl = document.createElement("time");
+  dueDateEl.className = "todo-date";
+  content.append(dueDateEl);
 
   const deleteBtn = document.createElement("button");
   deleteBtn.className = "delete-btn";
@@ -310,7 +326,8 @@ function createTodoElement(todo) {
   deleteBtn.textContent = "删除";
   deleteBtn.setAttribute("aria-label", `删除「${todo.text}」`);
 
-  element.append(checkbox, text, deleteBtn);
+  element.append(checkbox, content, deleteBtn);
+  syncTodoDateElement(dueDateEl, todo);
   return element;
 }
 
@@ -324,6 +341,11 @@ function syncTodoElement(element, todo) {
   const text = element.querySelector(".todo-text");
   text.textContent = todo.text;
   text.title = todo.text;
+
+  const dueDateEl = element.querySelector(".todo-date");
+  if (dueDateEl) {
+    syncTodoDateElement(dueDateEl, todo);
+  }
 
   const deleteBtn = element.querySelector(".delete-btn");
   deleteBtn.setAttribute("aria-label", `删除「${todo.text}」`);
@@ -374,6 +396,86 @@ function flashInputError() {
   }, 300);
 }
 
+function normalizeDueDate(value) {
+  if (!value || !DATE_PATTERN.test(value)) {
+    return null;
+  }
+  return value;
+}
+
+function getTodayISO() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function shiftISODate(isoDate, days) {
+  const date = new Date(`${isoDate}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDueDateLabel(isoDate) {
+  const date = new Date(`${isoDate}T00:00:00`);
+  return date.toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  });
+}
+
+function getDueDateStatus(isoDate, completed) {
+  if (completed) {
+    return "done";
+  }
+
+  const today = getTodayISO();
+  if (isoDate < today) {
+    return "overdue";
+  }
+  if (isoDate === today) {
+    return "today";
+  }
+  return "upcoming";
+}
+
+function syncTodoDateElement(element, todo) {
+  if (!todo.dueDate) {
+    element.hidden = true;
+    element.textContent = "";
+    element.removeAttribute("datetime");
+    element.className = "todo-date";
+    return;
+  }
+
+  element.hidden = false;
+  element.dateTime = todo.dueDate;
+  element.textContent = formatDueDateLabel(todo.dueDate);
+
+  const status = getDueDateStatus(todo.dueDate, todo.completed);
+  element.className = "todo-date";
+  if (status === "overdue") {
+    element.classList.add("is-overdue");
+  } else if (status === "today") {
+    element.classList.add("is-today");
+  }
+}
+
+function normalizeTodo(todo) {
+  return {
+    id: todo.id,
+    text: todo.text,
+    completed: todo.completed,
+    dueDate: normalizeDueDate(todo.dueDate),
+  };
+}
+
 function loadTodos() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -386,13 +488,15 @@ function loadTodos() {
       return [];
     }
 
-    return parsed.filter(
-      (todo) =>
-        todo &&
-        typeof todo.id === "string" &&
-        typeof todo.text === "string" &&
-        typeof todo.completed === "boolean"
-    );
+    return parsed
+      .filter(
+        (todo) =>
+          todo &&
+          typeof todo.id === "string" &&
+          typeof todo.text === "string" &&
+          typeof todo.completed === "boolean"
+      )
+      .map(normalizeTodo);
   } catch {
     return [];
   }
@@ -401,7 +505,6 @@ function loadTodos() {
 function saveTodos() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
-    storageFailed = false;
     storageBanner.hidden = true;
     return true;
   } catch {
