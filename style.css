@@ -46,9 +46,6 @@
     --primary-soft-text: #e0e7ff;
     --danger: #f87171;
     --shadow: rgba(0, 0, 0, 0.35);
-    --banner-bg: #422006;
-    --banner-border: #d97706;
-    --banner-text: #fde68a;
     --toast-bg: #374151;
     --toast-text: #f9fafb;
     --error-border: #f87171;
@@ -89,27 +86,6 @@ h1 {
   margin: 0 0 1rem;
   font-size: clamp(1.3rem, 4vw, 2rem);
   text-align: center;
-}
-
-.banner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  padding: 0.65rem 0.75rem;
-  border-radius: 8px;
-  border: 1px solid var(--banner-border);
-  background: var(--banner-bg);
-  color: var(--banner-text);
-  font-size: 0.9rem;
-}
-
-.banner button {
-  background: var(--primary);
-  padding: 0.4rem 0.75rem;
-  font-size: 0.85rem;
 }
 
 .todo-form {

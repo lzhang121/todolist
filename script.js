@@ -17,9 +17,8 @@ const emptyHint = emptyState.querySelector(".empty-hint");
 const emptySampleBtn = document.getElementById("empty-sample");
 const toast = document.getElementById("toast");
 const toastUndoBtn = document.getElementById("toast-undo");
-const storageBanner = document.getElementById("storage-banner");
-const storageRetryBtn = document.getElementById("storage-retry");
 
+let memoryStore = null;
 let todos = loadTodos();
 let currentFilter = "all";
 let lastAddedId = null;
@@ -55,11 +54,6 @@ function init() {
 
   emptySampleBtn.addEventListener("click", addSampleTodos);
   toastUndoBtn.addEventListener("click", undoDelete);
-  storageRetryBtn.addEventListener("click", () => {
-    if (saveTodos()) {
-      storageBanner.hidden = true;
-    }
-  });
 }
 
 function onSubmit(event) {
@@ -476,39 +470,78 @@ function normalizeTodo(todo) {
   };
 }
 
-function loadTodos() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return [];
-    }
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed
-      .filter(
-        (todo) =>
-          todo &&
-          typeof todo.id === "string" &&
-          typeof todo.text === "string" &&
-          typeof todo.completed === "boolean"
-      )
-      .map(normalizeTodo);
-  } catch {
+function parseTodos(raw) {
+  const parsed = JSON.parse(raw);
+  if (!Array.isArray(parsed)) {
     return [];
+  }
+
+  return parsed
+    .filter(
+      (todo) =>
+        todo &&
+        typeof todo.id === "string" &&
+        typeof todo.text === "string" &&
+        typeof todo.completed === "boolean"
+    )
+    .map(normalizeTodo);
+}
+
+function readStorageValue(store) {
+  try {
+    return store.getItem(STORAGE_KEY);
+  } catch {
+    return null;
   }
 }
 
-function saveTodos() {
+function writeStorageValue(store, value) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
-    storageBanner.hidden = true;
+    store.setItem(STORAGE_KEY, value);
     return true;
   } catch {
-    storageBanner.hidden = false;
     return false;
   }
+}
+
+function loadTodos() {
+  const stores = [localStorage, sessionStorage];
+
+  for (const store of stores) {
+    const raw = readStorageValue(store);
+    if (!raw) {
+      continue;
+    }
+
+    try {
+      return parseTodos(raw);
+    } catch {
+      continue;
+    }
+  }
+
+  if (memoryStore) {
+    try {
+      return parseTodos(memoryStore);
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+}
+
+function saveTodos() {
+  const payload = JSON.stringify(todos);
+
+  if (writeStorageValue(localStorage, payload)) {
+    return true;
+  }
+
+  if (writeStorageValue(sessionStorage, payload)) {
+    return true;
+  }
+
+  memoryStore = payload;
+  return true;
 }

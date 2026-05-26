@@ -10,7 +10,7 @@
 - 情境化空状态与示例待办
 - 删除后 5 秒内撤销
 - 新增项高亮动画
-- 本地保存失败提示与重试
+- 存储自动降级（localStorage → sessionStorage → 当前会话内存）
 - 跟随系统的暗色模式
 - 基础无障碍（键盘、屏幕阅读器、减少动效）
 
@@ -22,7 +22,7 @@
 python3 -m http.server 8080
 ```
 
-浏览器打开 `http://localhost:8080`，或直接双击打开 `index.html`（部分浏览器对 `file://` 下的 `localStorage` 有限制，推荐用本地服务器）。
+浏览器打开 `http://localhost:8080`，或直接双击打开 `index.html`。若浏览器禁止持久化存储，页面会自动降级到 `sessionStorage` 或仅当前标签页内存，不再弹出告警条。
 
 ## 浏览器要求
 
