@@ -140,20 +140,24 @@ function loadTodos() {
         typeof todo.text === "string" &&
         typeof todo.completed === "boolean"
     );
-  } catch {
+  } catch (error) {
     return [];
   }
 }
 
 function saveTodos() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+  } catch (error) {
+    // Keep app interactive even when storage is blocked.
+  }
 }
 
 function escapeHtml(value) {
   return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
